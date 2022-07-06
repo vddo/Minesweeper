@@ -207,6 +207,10 @@ class MinesweeperAI():
 
         # 2)
         self.safes.add(cell)
+        self.mark_safe(cell)
+
+        # for known_safes1 in self.safes:
+        #     self.mark_safe(known_safes1)
 
         # 3)
         # Define set of neighboring cells
@@ -219,21 +223,41 @@ class MinesweeperAI():
         # Update knowledge with new sentence
         new_sentence = Sentence(cells=neighbors, count=count)
         self.knowledge.append(new_sentence)
+        for sentence in self.knowledge:
+            for known_safes1 in self.safes:
+                sentence.mark_safe(known_safes1)
+            for known_mines1 in self.mines:
+                sentence.mark_mine(known_mines1)
 
         # Update knowledge
-        # Mark known safes or mines
-        # Mark safes
-        for sentence in self.knowledge:
-            if sentence.count == 0:
-                to_mark_safe = copy.deepcopy(sentence.cells)
-                for safe_cell in to_mark_safe:
-                    self.mark_safe(safe_cell)
-        # Update knowledge with mines
-        # Mark mines: if len(neighbors) == count then all neighbors mines
-            if len(sentence.cells) == sentence.count:
-                to_mark_mine = copy.deepcopy(sentence.cells)
-                for found_mine in to_mark_mine:
-                    self.mark_mine(found_mine)
+        # Check for safes
+        to_mark_safe = set(cell)
+        to_mark_mine = set(cell)
+        while len(to_mark_safe) != 0 or len(to_mark_mine) != 0:
+            to_mark_safe.clear()
+            to_mark_mine.clear()
+            for sentence in self.knowledge:
+                print(sentence.cells)
+                print(sentence.count)
+                print("_________________\n")
+                if sentence.count == 0:
+                    for safe_cell in sentence.cells:
+                        to_mark_safe.add(safe_cell)
+            # Check for mines
+            # Mark mines: if len(neighbors) == count then all neighbors mines
+                if len(sentence.cells) == sentence.count:
+                    for found_mine in sentence.cells:
+                        to_mark_mine.add(found_mine)
+            for element in to_mark_safe:
+                self.mark_safe(element)
+            for element in to_mark_mine:
+                self.mark_mine(element)
+            for sentence in self.knowledge:
+                if len(sentence.cells) == 0:
+                    self.knowledge.remove(sentence)
+            print("after update")
+            print("safes:", self.safes, "total safes:", len(self.safes))
+            print("mines:", self.mines, "total mines:", len(self.mines), "\n")
 
         # Update knowledge_base
         # for each element in knowledge (sentences)
@@ -253,8 +277,9 @@ class MinesweeperAI():
 
         # First check if self.safes is superset of self.moves_made
         # Then subtract the same elements from both sets maves_made and safes
-        print("mines:", self.mines)
-        print("safes:", self.safes)
+        print("NEW MOVE")
+        print("safes:", self.safes, "total safes:", len(self.safes))
+        print("mines:", self.mines, "total mines:", len(self.mines))
         if self.safes.issuperset(self.moves_made):
             pot_safe_moves = self.safes.difference(self.moves_made)
         else:
@@ -271,12 +296,13 @@ class MinesweeperAI():
             1) have not already been chosen, and
             2) are not known to be mines
         """
-        print("mines:", self.mines)
-        print("safes:", self.safes)
         # Merge self.moves_made and self.mines
         no_moves = self.mines.union(self.moves_made)
 
         # Subtract no_moves from self.all_moves
         pot_rand_moves = self.all_moves.difference(no_moves)
 
-        return pot_rand_moves.pop()
+        if len(pot_rand_moves) == 0:
+            return None
+        else:
+            return pot_rand_moves.pop()
